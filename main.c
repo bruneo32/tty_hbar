@@ -176,7 +176,7 @@ loop:
 			// Export all environment variables from the parent process to the subshell
 			"bash -c 'while IFS= read -r -d \"\" v; do export \"$v\"; done < /proc/%d/environ; "
 			// Execute the command with the CWD of the parent process
-			"PWD=$(readlink /proc/%d/cwd) eval \"echo -e \\\"$(sed -n '%dp' '%s')\\\"\"'",
+			"PWD=$(readlink /proc/%d/cwd) eval \"echo -e \\\"$(sed -n '%zup' '%s')\\\"\"'",
 			parent_pid, parent_pid, ln + 1, config_path);
 
 		const size_t segment_width = segcol_width + (ln < segcol_rem ? 1 : 0);
@@ -196,7 +196,7 @@ loop:
 					line[segment_width - 2] = '+';
 
 				const size_t len = count_display_width(line);
-				const size_t pad = segment_width - len;
+				const int pad = segment_width - len;
 
 				// Print the output into the hbar segment
 				if (ln == cmd_lines - 1) {
@@ -207,8 +207,8 @@ loop:
 					printf("%s%*s", line, pad, "");
 				} else {
 					// Other lines, align center
-					size_t pad_left = pad / 2;
-					size_t pad_right = pad - pad_left;
+					const int pad_left = pad / 2;
+					const int pad_right = pad - pad_left;
 					printf("%*s%s%*s", pad_left, "", line, pad_right, "");
 				}
 			}

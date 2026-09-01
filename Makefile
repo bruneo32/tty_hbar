@@ -1,7 +1,7 @@
 .PHONY: clean install
 
 tty_hbar: main.c
-	$(CC) -O2 -s $^ -o $@
+	$(CC) -Wall -O2 -s $^ -o $@
 
 clean:
 	rm -f tty_hbar
