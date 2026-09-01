@@ -207,5 +207,5 @@ loop:
 	usleep(DELAY_MS * 1000);  // sleep 200ms
 	goto loop;
 
-	sigint_handler(0); // Exit
+	// UNREACHABLE
 }
