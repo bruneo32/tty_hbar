@@ -137,10 +137,19 @@ int main(int argc, const char *argv[]) {
 	if (!cmd)
 		return 1;
 
-	// Get parent process environment file
+	// Get parent pid and gid
 	const pid_t parent_pid = getppid();
+	const pid_t parent_gid = getpgid(parent_pid);
 
 loop:
+	// Check if the shell is the current foreground process of the TTY.
+	// If it is NOT, it means a command like nano, less, or vim is running.
+	// We pause rendering to avoid clobbering their UI.
+	if (tcgetpgrp(STDOUT_FILENO) != parent_gid) {
+		usleep(DELAY_MS * 1000);
+		goto loop;
+	}
+
 	// Get the terminal size
 	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 
