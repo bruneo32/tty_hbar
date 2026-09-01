@@ -5,23 +5,24 @@ Useful for showing information while using a non-graphical terminal like **ssh**
 
 # Build
 ```bash
-make
+make              # Compile
+sudo make install # Install system-wide
 ```
 
 # Run
 Start the program as a background process.
 > Don't worry, the process will exit when you close the terminal.
 ```bash
-./tty_hbar &
+tty_hbar &
 ```
 
 To stop the program, just kill the process.
 ```bash
 $ jobs
-[1]+  Running                 ./tty_hbar &
+[1]+  Running                   tty_hbar &
 
 $ kill %1
-[1]+  Stopped                 ./tty_hbar &
+[1]+  Stopped                   tty_hbar &
 ```
 
 # Usage
