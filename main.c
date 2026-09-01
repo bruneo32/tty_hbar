@@ -23,10 +23,18 @@
 
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
 
+// Terminal window size
+volatile struct winsize twin;
+
 void sigint_handler(int signum) {
 	printf(ESC "8");  // Restore cursor [DEC]
 	putchar('\n');
 	exit(0);
+}
+
+void sigwinch_handler(int signum) {
+	// Get the terminal size
+	ioctl(0, TIOCGWINSZ, &twin);
 }
 
 size_t file_count_lines(const char *filepath) {
@@ -104,9 +112,6 @@ size_t count_display_width(const char *str) {
 }
 
 int main(int argc, const char *argv[]) {
-	struct winsize w;
-	char config_path[256];
-
 	// Register signal handlers
 	signal(SIGHUP, sigint_handler);
 	signal(SIGINT, sigint_handler);
@@ -114,10 +119,19 @@ int main(int argc, const char *argv[]) {
 	signal(SIGPIPE, sigint_handler);
 	signal(SIGTERM, sigint_handler);
 
+	// Register signal for SIGWINCH
+	// Window resize signal (4.3BSD, Sun)
+	struct sigaction sa;
+	sa.sa_handler = sigwinch_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sigaction(SIGWINCH, &sa, NULL);
+
 	// Enable UTF-8 parsing
 	setlocale(LC_ALL, "");
 
 	// Resolve the config file path
+	char config_path[256];
 	const char *home = getenv("HOME");
 	if (home)
 		snprintf(config_path, sizeof(config_path), "%s/" TTYHBAR_FILENAME, home);
@@ -140,19 +154,21 @@ int main(int argc, const char *argv[]) {
 	// Get parent process environment file
 	const pid_t parent_pid = getppid();
 
+	// Request the terminal size on startup
+	sigwinch_handler(0);
+
 loop:
-	// Get the terminal size
-	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+	// Fetch twin.ws_col for this whole loop, because it's volatile
+	const typeof(twin.ws_col) twin_cols = twin.ws_col;
+	const size_t cmd_lines = file_count_lines(config_path);
+	const size_t segcol_width = twin_cols / cmd_lines;
+	const size_t segcol_rem   = twin_cols % cmd_lines;
 
 	printf(
 		ESC "7"    // Save cursor [DEC]: position, attributes, etc
 		ESC "[H"   // Go to 0:0
 		ESC "[2K"  // Clear line
 	);
-
-	const size_t cmd_lines = file_count_lines(config_path);
-	const size_t segcol_width = w.ws_col / cmd_lines;
-	const size_t segcol_rem   = w.ws_col % cmd_lines;
 
 	for (size_t ln = 0; ln < cmd_lines; ln++) {
 		memset(cmd, 0, CMD_BUFSIZE);
@@ -202,10 +218,8 @@ loop:
 		}
 	}
 
-	printf(ESC "8");	 // Restore cursor [DEC]
-	fflush(stdout);      // Flush the output (send to the terminal)
+	printf(ESC "8");          // Restore cursor [DEC]
+	fflush(stdout);           // Flush the output (send to the terminal)
 	usleep(DELAY_MS * 1000);  // sleep 200ms
 	goto loop;
-
-	sigint_handler(0); // Exit
 }
