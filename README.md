@@ -16,6 +16,13 @@ Start the program as a background process.
 tty_hbar &
 ```
 
+## Run nicely
+> Be nice!
+You can tell the program to be nicer and use less CPU time with the `nice` command.
+```bash
+nice -n5 tty_hbar &
+```
+
 To stop the program, just kill the process.
 ```bash
 $ jobs
