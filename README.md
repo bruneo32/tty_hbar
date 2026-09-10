@@ -5,8 +5,7 @@ Useful for showing information while using a non-graphical terminal like **ssh**
 
 # Build
 ```bash
-make              # Compile
-sudo make install # Install system-wide
+sudo make install # Compile and install system-wide
 ```
 
 # Run
