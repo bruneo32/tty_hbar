@@ -141,6 +141,10 @@ int main(int argc, const char *argv[]) {
 	const pid_t parent_pid = getppid();
 	const pid_t parent_gid = getpgid(parent_pid);
 
+	// Get the parent process CWD symlink
+	char proc_parent_cwd[256] = {0};
+	snprintf(proc_parent_cwd, sizeof(proc_parent_cwd), "/proc/%d/cwd", parent_pid);
+
 loop:
 	// Check if the shell is the current foreground process of the TTY.
 	// If it is NOT, it means a command like nano, less, or vim is running.
@@ -163,14 +167,19 @@ loop:
 	const size_t segcol_width = w.ws_col / cmd_lines;
 	const size_t segcol_rem   = w.ws_col % cmd_lines;
 
+	// Set this process CWD to its parent's
+	char parent_cwd[256] = {0};
+	readlink(proc_parent_cwd, parent_cwd, sizeof(parent_cwd));
+	chdir(parent_cwd);
+
 	for (size_t ln = 0; ln < cmd_lines; ln++) {
 		memset(cmd, 0, CMD_BUFSIZE);
 		snprintf(cmd, CMD_BUFSIZE - 1,
 			// Export all environment variables from the parent process to the subshell
 			"bash -c 'while IFS= read -r -d \"\" v; do export \"$v\"; done < /proc/%d/environ; "
 			// Execute the command with the CWD of the parent process
-			"PWD=$(readlink /proc/%d/cwd) eval \"echo -e \\\"$(sed -n '%zup' '%s')\\\"\"'",
-			parent_pid, parent_pid, ln + 1, config_path);
+			"PWD=$(pwd) eval \"echo -e \\\"$(sed -n '%zup' '%s')\\\"\"'",
+			parent_pid, ln + 1, config_path);
 
 		const size_t segment_width = segcol_width + (ln < segcol_rem ? 1 : 0);
 
