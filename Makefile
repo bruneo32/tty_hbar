@@ -1,7 +1,7 @@
 .PHONY: clean install
 
 tty_hbar: main.c
-	$(CC) -Wall -O2 -s $^ -o $@
+	$(CC) -Wall -Wno-switch -O2 -s $^ -o $@ -lyaml
 
 clean:
 	rm -f tty_hbar

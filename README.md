@@ -4,6 +4,12 @@ Simple configurable horizontal bar for the terminal using ANSI escape codes.
 Useful for showing information while using a non-graphical terminal like **ssh**.
 
 # Build
+Install dependencies
+```bash
+sudo apt install libyaml-dev
+```
+
+Build the binary
 ```bash
 sudo make install # Compile and install system-wide
 ```
@@ -33,35 +39,86 @@ $ kill %1
 
 # Usage
 Create a config file (`~/.tty_hbar`) with the commands you want to display.
-- Each line is a column
 - Hot-reload config file
-- You can align the output to the left, center or right
-- You can use ANSI escape codes in the output
-- You can use the `$PWD`, `$(date)`, etc, like **PS1** shell variable does.
+
+## Column properties
+- **align**: *left*|*center*|*right*
+  - Align the text in the column
+- **shrink**: *true*|*false*
+  - If **true**, the column will be shrinked to fit the text, making the neighbor columns grow
+- **color**:
+  - [ANSI color code](<https://www.dev-toolbox.tech/tools/ansi-color-reference>) to color the whole column.
+  - **Example**: `color: 97;44` makes **bright white** text on a **blue** background column.
+- **cmd**:
+  - The text to display in the column
+  - You can use **ANSI escape codes** in the output
+  - You can evaluate bash expressions like `$PWD`, `$(date)`, etc.
 
 ## Example config files
 
 ### Example 1
-| Column 1 (align left)   | Column 2 (align center) | Column 3 (align right) |
-|:------------------------|:-----------------------:|-----------------------:|
-| /home/johndoe           |         20:30:40        |    johndoe @ localhost |
+| Column 1 (align left)   | Column 2 (align left) |
+|:------------------------|:----------------------|
+| hello                   |                 world |
 
-```bash
-$PWD
-$(date +%H:%M:%S)
-$USER @ $HOSTNAME
+```yaml
+- cmd: hello
+- cmd: world
+```
+
+### Example 2 (align)
+| Column 1 (align left) | Column 2 (align center) | Column 3 (align right) |
+|:----------------------|:-----------------------:|-----------------------:|
+| /home/johndoe         |        [20:30:40]       |      johndoe@localhost |
+
+```yaml
+-
+  align: left
+  cmd: $PWD
+-
+  align: center
+  cmd: "[$(date +%H:%M:%S)]"
+-
+  align: right
+  cmd: "$USER@$HOSTNAME"
 ```
 
 ### Example 3 (color)
 | Column 1 (align left) | Column 2 (align right) |
 |:----------------------|-----------------------:|
-| /home/johndoe         |             [20:30:40] |
+| /home/johndoe         |              localhost |
 
-Use [ANSI escape codes](<https://ansi.tools/?s=%255Ce%255B30%253B42m%2520%252Fhome%252Fjohndoe%2520%2520%2520%2520%2520%2520%2520%2520%255Ce%255B1%253B31m20%253A30%253A40>) to bring life to the output.
+Use [ANSI escape codes](<https://ansi.tools/?s=%255Ce%255B30%253B42m%2520%252Fhome%252Fjohndoe%2520%2520%2520%2520%2520%2520%2520%2520%255Ce%255B1%253B31mlocalhost>) to bring life to the output.
 - Use `\e[30;42m`  to color the output as **black** foreground, **green** background.
-- Use `\e[1;31m` to display the time in **bold red**.
+- Use `\e[1;31m` to display the hostname in **bold red**.
 
-```bash
-\e[30;42m$PWD
-\e[31m[$(date +%H:%M:%S)]
+```yaml
+-
+  align: left
+  color: "30;42"
+  cmd: $PWD
+-
+  align: right
+  color: "1;31"
+  cmd: "$HOSTNAME"
+```
+
+### Example 4 (shrink)
+| Column 1 (align left)                 | Column 2 (align right) |
+|:--------------------------------------|-----------------------:|
+| /home/johndoe                         |             [20:30:40] |
+
+In this case, PWD can be very long but the date will always be small.
+So we can shrink the date column to make space for the PWD column.
+
+```yaml
+-
+  align: left
+  color: "30;42"
+  cmd: $PWD
+-
+  align: right
+  color: "1;31"
+  shrink: true
+  cmd: "[$(date +%H:%M:%S)]"
 ```
