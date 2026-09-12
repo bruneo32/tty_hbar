@@ -368,7 +368,7 @@ loop:
 			// Export all environment variables from the parent process to the subshell
 			"bash -c 'while IFS= read -r -d \"\" v; do export \"$v\"; done < /proc/%d/environ; "
 			// Execute the command with the CWD of the parent process
-			"PWD=$(pwd) eval \"echo -e \\\"%s\\\"\"'",
+			"export PWD=$(pwd); eval \"echo -e \\\"%s\\\"\"'",
 			parent_pid, col->cmd);
 
 		FILE *fp = popen(cmd, "r");
