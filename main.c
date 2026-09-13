@@ -286,6 +286,61 @@ size_t count_display_width(const char *str) {
 	return width;
 }
 
+// Truncate `str` so that its total display width is at most `max_width` columns
+static void truncate_to_width(char *str, size_t max_width) {
+	if (max_width == 0) {
+		str[0] = '\0';
+		return;
+	}
+
+	size_t width = 0;
+	mbstate_t state = {0};
+
+	while (*str != '\0') {
+		// Skip ANSI escape sequences without consuming display width
+		if (*str == '\033') {
+			if (str[1] == '[') {
+				str += 2;
+				// CSI sequences end with a character in 0x40 (@) to 0x7E (~)
+				while (*str != '\0' && (*str < '@' || *str > '~'))
+					str++;
+				if (*str != '\0')
+					str++;
+			} else {
+				// Skip lonely ESC char
+				str++;
+			}
+			continue;
+		}
+
+		// Decode one UTF-8 char and its display width
+		wchar_t wc;
+		size_t bytes = mbrtowc(&wc, str, MB_CUR_MAX, &state);
+		size_t cw;
+
+		if (bytes == (size_t)-1 || bytes == (size_t)-2) {
+			cw = 1;
+			bytes = 1;
+			memset(&state, 0, sizeof(state));
+		} else if (bytes == 0) {
+			break;
+		} else {
+			int w = wcwidth(wc);
+			cw = (w > 0) ? (size_t)w : 0;
+		}
+
+		// If this character would push us past max_width,
+		// cut here and terminate
+		if (width + cw > max_width) {
+			*str = '\0';
+			return;
+		}
+
+		width += cw;
+		str += bytes;
+	}
+}
+
 void sigint_handler(int signum) {
 	printf(ESC "8");  // Restore cursor [DEC]
 	putchar('\n');
@@ -461,13 +516,17 @@ loop:
 		// Print the prefetched output formatted
 		char *line = pbufs[col_idx];
 		if (line[0]) {
-			const size_t segment_w = segments_width[col_idx] ;
-			// TODO: Depends on "flow" attribute
-			// If the line is too long, add a "+" at the end (if not shrinked)
-			if (segment_w >= segcol_width && line[segment_w- 1] != 0)
-				line[segment_w - 1] = '+';
+			const size_t segment_w = segments_width[col_idx];
 
-			const size_t len = count_display_width(line);
+			// TODO: Depends on "flow" attribute
+			// If the line is too long, add a "+" at the end
+			size_t len = count_display_width(line);
+			if (len > segment_w) {
+				truncate_to_width(line, segment_w);
+				line[strlen(line) - 1] = '+';
+				len = segment_w;
+			}
+
 			const int pad = segment_w - len;
 
 			// Print the output into the hbar segment
