@@ -51,16 +51,16 @@ enum Align {
 typedef struct ColumnConfig ColumnConfig;
 struct ColumnConfig {
 	bool shrink;
+	bool rtl;
 	Align align;
-	Align flow;
 	char *color;
 	char *cmd;
 };
 
-ColumnConfig default_col_data = {
+const ColumnConfig default_col_data = {
 	.shrink = false,
+	.rtl = false,
 	.align = AlignLeft,
-	.flow = AlignRight,
 	.color = NULL,
 	.cmd = NULL,
 };
@@ -96,8 +96,8 @@ void parse_config(const char *filepath) {
 	enum e_keys {
 		KEY_NONE = 0,
 		KEY_SHRINK,
+		KEY_RTL,
 		KEY_ALIGN,
-		KEY_FLOW,
 		KEY_COLOR,
 		KEY_CMD
 	};
@@ -130,7 +130,7 @@ void parse_config(const char *filepath) {
 				// Preset defaults
 				col->shrink = default_col_data.shrink;
 				col->align = default_col_data.align;
-				col->flow = default_col_data.flow;
+				col->rtl = default_col_data.rtl;
 				// Do not preset strings
 				state = STATE_GET_KEY;
 				break;
@@ -154,10 +154,10 @@ void parse_config(const char *filepath) {
 
 						if (streq(str, "shrink")) {
 							key = KEY_SHRINK;
-						} else if (streq(str, "align")) {
+						} else if (streq(str, "rtl")) {
+							key = KEY_RTL;
+						}  else if (streq(str, "align")) {
 							key = KEY_ALIGN;
-						} else if (streq(str, "flow")) {
-							key = KEY_FLOW;
 						} else if (streq(str, "color")) {
 							key = KEY_COLOR;
 						} else if (streq(str, "cmd")) {
@@ -179,18 +179,16 @@ void parse_config(const char *filepath) {
 									col->shrink = true;
 								// Default value is false
 								break;
+							case KEY_RTL:
+								if (streq(str, "true"))
+									col->rtl = true;
+								// Default value is false
+								break;
 							case KEY_ALIGN:
 								if (streq(str, "center"))
 									col->align = AlignCenter;
 								else if (streq(str, "right"))
 									col->align = AlignRight;
-								// Default value is 0 (AlignLeft)
-								break;
-							case KEY_FLOW:
-								if (streq(str, "center"))
-									col->flow = AlignCenter;
-								else if (streq(str, "right"))
-									col->flow = AlignRight;
 								// Default value is 0 (AlignLeft)
 								break;
 							case KEY_COLOR:
@@ -518,7 +516,7 @@ loop:
 		if (line[0]) {
 			const size_t segment_w = segments_width[col_idx];
 
-			// TODO: Depends on "flow" attribute
+			// TODO: Depends on "rtl" attribute
 			// If the line is too long, add a "+" at the end
 			size_t len = count_display_width(line);
 			if (len > segment_w) {
