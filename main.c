@@ -516,12 +516,26 @@ loop:
 		if (line[0]) {
 			const size_t segment_w = segments_width[col_idx];
 
-			// TODO: Depends on "rtl" attribute
 			// If the line is too long, add a "+" at the end
 			size_t len = count_display_width(line);
 			if (len > segment_w) {
-				truncate_to_width(line, segment_w);
-				line[strlen(line) - 1] = '+';
+				if (!col->rtl) {
+					// Overflow '+' to the right
+					truncate_to_width(line, segment_w);
+					line[strlen(line) - 1] = '+';
+				} else {
+					// Overflow '+' to the left
+					char *p = &line[strlen(line) - 1];
+					// Backtrack until fits
+					while (p > line && count_display_width(p) < segment_w)
+						p--;
+					// Extra safety for multibyte characters
+					if (strlen(p) > segment_w)
+						truncate_to_width(p, segment_w);
+					// Mark the overflow
+					p[0] = '+';
+					line = p;
+				}
 				len = segment_w;
 			}
 
